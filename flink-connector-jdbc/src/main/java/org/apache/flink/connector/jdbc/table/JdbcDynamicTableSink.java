@@ -22,22 +22,27 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.connector.jdbc.JdbcExecutionOptions;
 import org.apache.flink.connector.jdbc.internal.GenericJdbcSinkFunction;
+import org.apache.flink.connector.jdbc.internal.connection.SimpleJdbcConnectionProvider;
 import org.apache.flink.connector.jdbc.internal.options.InternalJdbcConnectionOptions;
 import org.apache.flink.connector.jdbc.internal.options.JdbcDmlOptions;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.sink.SinkFunctionProvider;
+import org.apache.flink.table.connector.sink.abilities.SupportsTruncate;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.types.RowKind;
+import org.apache.flink.util.FlinkRuntimeException;
 
+import java.sql.Connection;
+import java.sql.Statement;
 import java.util.Objects;
 
 import static org.apache.flink.util.Preconditions.checkState;
 
 /** A {@link DynamicTableSink} for JDBC. */
 @Internal
-public class JdbcDynamicTableSink implements DynamicTableSink {
+public class JdbcDynamicTableSink implements DynamicTableSink, SupportsTruncate {
 
     private final InternalJdbcConnectionOptions jdbcOptions;
     private final JdbcExecutionOptions executionOptions;
@@ -121,5 +126,17 @@ public class JdbcDynamicTableSink implements DynamicTableSink {
     public int hashCode() {
         return Objects.hash(
                 jdbcOptions, executionOptions, dmlOptions, physicalRowDataType, dialectName);
+    }
+
+    @Override
+    public void executeTruncation() {
+        String tableName = jdbcOptions.getTableName();
+        try (Connection coon =
+                        new SimpleJdbcConnectionProvider(jdbcOptions).getOrEstablishConnection();
+                Statement stat = coon.createStatement()) {
+            stat.execute(dmlOptions.getDialect().getTruncateStatement(tableName));
+        } catch (Exception e) {
+            throw new FlinkRuntimeException("Fail to execute truncate sql.", e);
+        }
     }
 }

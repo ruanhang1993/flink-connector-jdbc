@@ -143,4 +143,9 @@ public class MySqlDialect extends AbstractDialect {
             return url;
         }
     }
+
+    @Override
+    public String getTruncateStatement(String tableName) {
+        return "TRUNCATE TABLE " + quoteIdentifier(tableName);
+    }
 }

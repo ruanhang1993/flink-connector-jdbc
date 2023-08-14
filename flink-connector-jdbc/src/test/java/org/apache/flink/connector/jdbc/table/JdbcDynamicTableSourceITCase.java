@@ -311,7 +311,7 @@ public abstract class JdbcDynamicTableSourceITCase implements DatabaseTest {
             List<Row> collected =
                     executeQuery(
                             "SELECT S.id, S.name, D.id, D.timestamp6_col, D.decimal_col FROM value_source"
-                                    + " AS S JOIN jdbc_lookup for system_time as of S.proctime AS D ON S.id = D.id");
+                                    + " AS S JOIN jdbc_lookup for system_time as of S.proctime AS D ON S.id = D.id where D.decimal_col = 333.1234");
 
             assertThat(collected).hasSize(3);
 
